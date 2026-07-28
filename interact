@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>摄像头手势识别</title>
+  <style>
+    /* 简单的样式控制 */
+    body { display: flex; flex-direction: column; align-items: center; font-family: sans-serif; }
+    #video-feed { width: 640px; height: 480px; border: 1px solid #ccc; }
+    #info { margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h2>🤖 摄像头手势演示</h2>
+  <video id="video-feed" playsinline></video>
+  <div id="info">状态：正在加载模型...</div>
+
+  <!-- 1. 引入 MediaPipe 核心库和摄像头工具 -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+  <script>
+    const videoElement = document.getElementById('video-feed');
+    const infoDiv = document.getElementById('info');
+
+    // 2. 初始化 MediaPipe Hands 实例
+    const hands = new Hands({
+      locateFile: (file) => {
+        // 指定模型文件的加载路径
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+      }
+    });
+
+    // 3. 配置手势检测参数
+    hands.setOptions({
+      maxNumHands: 2,          // 最多检测2只手
+      modelComplexity: 1,      // 模型复杂度 (0-1)
+      minDetectionConfidence: 0.5, // 最小检测置信度
+      minTrackingConfidence: 0.5    // 最小追踪置信度
+    });
+
+    // 4. 处理检测结果的回调函数
+    hands.onResults((results) => {
+      infoDiv.innerHTML = `状态：检测中 (检测到 ${results.multiHandedness?.length || 0} 只手)`;
+      
+      // 在这里，你可以处理 results.multiHandLandmarks 数据
+      // 比如，计算手指间距离，映射为页面滚动或翻页操作
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        // 示例：获取第一只手的21个关键点坐标
+        const landmarks = results.multiHandLandmarks[0];
+        // 你后续的自定义交互逻辑都可以在这里实现
+        infoDiv.innerHTML += `，手掌状态：已识别 (可执行自定义逻辑)`;
+      }
+    });
+
+    // 5. 启动摄像头
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        // 每一帧都送入模型进行预测
+        await hands.send({image: videoElement});
+      },
+      width: 640,
+      height: 480
+    });
+    camera.start().then(() => {
+      infoDiv.innerHTML = '状态：摄像头已启动，正在识别手势...';
+    }).catch(err => {
+      infoDiv.innerHTML = `❌ 摄像头启动失败: ${err.message}`;
+      console.error(err);
+    });
+  </script>
+</body>
+</html>
