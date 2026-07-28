@@ -3,62 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jessie - 正在编织中</title>
+  <title>Jessie - 宣纸笔迹</title>
   <style>
-    /* 重置样式，让画布铺满全屏 */
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
     body {
       min-height: 100vh;
-      background-color: #faf6f0;
+      /* 宣纸底色：温暖的米黄，带一点不易察觉的渐变 */
+      background: #f7f2e9;
+      background-image: 
+        /* 模拟宣纸的纤维纹理 */
+        repeating-linear-gradient(45deg, rgba(200, 180, 160, 0.02) 0px, rgba(200, 180, 160, 0.02) 2px, transparent 2px, transparent 6px),
+        repeating-linear-gradient(-45deg, rgba(200, 180, 160, 0.02) 0px, rgba(200, 180, 160, 0.02) 2px, transparent 2px, transparent 6px),
+        /* 边缘微弱的做旧感 */
+        radial-gradient(circle at 20% 30%, rgba(220, 200, 180, 0.1) 0%, transparent 60%),
+        radial-gradient(circle at 80% 70%, rgba(180, 160, 140, 0.08) 0%, transparent 50%);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: "Noto Serif SC", "华文楷体", "KaiTi", "楷体", serif;
       position: relative;
       overflow: hidden;
     }
-    /* 内容卡片 - 毛玻璃效果，位于动画之上 */
+    
+    /* 内容卡片 - 半透明毛玻璃，让宣纸背景透出来 */
     .content {
       position: relative;
       z-index: 10;
       text-align: center;
-      padding: 3rem 4rem;
-      background: rgba(255, 255, 255, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border-radius: 32px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.06);
-      border: 1px solid rgba(255,255,255,0.3);
+      padding: 3.5rem 5rem;
+      background: rgba(247, 242, 233, 0.6);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(120, 100, 80, 0.08);
+      border: 1px solid rgba(220, 200, 180, 0.2);
     }
+    
     h1 {
-      font-size: 4rem;
+      font-size: 4.2rem;
       font-weight: 600;
-      color: #3d3d3d;
-      letter-spacing: -0.02em;
-      margin-bottom: 0.5rem;
+      color: #5a4a3a;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+      text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
     }
+    
     p {
-      font-size: 1.25rem;
-      color: #6b6b6b;
-      margin-bottom: 1.5rem;
+      font-size: 1.3rem;
+      color: #7a6a5a;
+      margin-bottom: 1.8rem;
       font-weight: 300;
+      letter-spacing: 0.2em;
     }
+    
     .links a {
-      color: #7a8f9c;
+      color: #8a7a6a;
       text-decoration: none;
       margin: 0 0.75rem;
-      font-size: 1rem;
-      transition: all 0.2s;
+      font-size: 1.1rem;
+      transition: all 0.3s;
       border-bottom: 1px solid transparent;
+      padding-bottom: 2px;
     }
-    .links a:hover {
-      color: #4a6a7a;
-      border-bottom-color: #b0c8d4;
-    }
-    .links span { color: #d5d5d5; }
     
-    /* 编织画布：位于底层 */
-    #knitting-canvas {
+    .links a:hover {
+      color: #4a3a2a;
+      border-bottom-color: #b0a090;
+    }
+    .links span { color: #c0b0a0; }
+    
+    /* 笔迹画布 */
+    #ink-canvas {
       position: fixed;
       top: 0;
       left: 0;
@@ -66,13 +82,13 @@
       height: 100%;
       z-index: 1;
       display: block;
-      pointer-events: none; /* 不干扰点击 */
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <!-- 动态编织画布 -->
-  <canvas id="knitting-canvas"></canvas>
+  <!-- 动态笔迹画布 -->
+  <canvas id="ink-canvas"></canvas>
 
   <!-- 个人介绍 -->
   <div class="content">
@@ -87,11 +103,8 @@
 
   <script>
     (function() {
-      const canvas = document.getElementById('knitting-canvas');
-      if (!canvas) {
-        console.error('找不到画布！');
-        return;
-      }
+      const canvas = document.getElementById('ink-canvas');
+      if (!canvas) { console.error('找不到画布！'); return; }
       const ctx = canvas.getContext('2d');
       let width, height;
 
@@ -104,123 +117,129 @@
       window.addEventListener('resize', resize);
       resize();
 
-      // 线条系统
-      const numLines = 35;
-      const points = [];
-      // 为每条线分配不同的速度因子和相位
-      for (let i = 0; i < numLines; i++) {
-        points.push({
-          // 在画布范围内随机分布起始点
+      // --- 笔迹系统：模拟毛笔书写 ---
+      const numStrokes = 18; // 笔迹数量
+      const strokes = [];
+      
+      // 生成初始笔迹
+      for (let i = 0; i < numStrokes; i++) {
+        strokes.push({
+          // 随机分布在画布各处
           x: Math.random() * width,
           y: Math.random() * height,
-          speed: 0.2 + Math.random() * 0.3, // 速度略有差异
+          // 每个笔迹有自己的移动速度和相位
+          speed: 0.08 + Math.random() * 0.15,
           phase: Math.random() * Math.PI * 2,
-          offset: Math.random() * 100
+          // 笔迹长度（影响线条拖尾）
+          length: 30 + Math.random() * 50,
+          // 笔触粗细变化
+          widthBase: 1.5 + Math.random() * 3,
+          // 透明度变化
+          alpha: 0.3 + Math.random() * 0.4,
+          // 存储历史位置用于拖尾
+          history: []
         });
       }
 
-      // 颜色盘 - 小清新毛线色
-      const palette = [
-        'rgba(210, 180, 140, 0.7)',
-        'rgba(195, 170, 145, 0.6)',
-        'rgba(180, 160, 135, 0.5)',
-        'rgba(220, 195, 165, 0.4)',
-        'rgba(200, 175, 150, 0.3)'
+      // 墨色：从浓到淡的棕灰色系
+      const inkColors = [
+        'rgba(60, 50, 40, 0.6)',
+        'rgba(80, 65, 50, 0.5)',
+        'rgba(100, 85, 70, 0.4)',
+        'rgba(120, 100, 85, 0.3)',
+        'rgba(140, 120, 105, 0.2)'
       ];
 
       let time = 0;
 
       function draw() {
-        time += 0.008;
-        // 清空画布 - 使用半透明清除实现拖尾效果
+        time += 0.005;
+        // 用极淡的半透明层覆盖，实现笔迹逐渐淡出的效果
         ctx.clearRect(0, 0, width, height);
         
-        // 绘制极淡的底纹网格
-        ctx.strokeStyle = 'rgba(200, 185, 170, 0.08)';
-        ctx.lineWidth = 0.5;
-        const step = 40;
-        for (let x = step; x < width; x += step) {
-          ctx.beginPath();
-          ctx.moveTo(x, 0);
-          ctx.lineTo(x, height);
-          ctx.stroke();
-        }
-        for (let y = step; y < height; y += step) {
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(width, y);
-          ctx.stroke();
-        }
-
-        // 更新点位置并绘制线条
-        // 让点沿着波浪路径移动，模拟编织的穿梭
-        const centerX = width / 2;
-        const centerY = height / 2;
-        
-        // 先更新所有点的位置
-        for (let i = 0; i < points.length; i++) {
-          const p = points[i];
-          // 使用正弦波让点在水平方向来回移动，同时缓慢向下，循环
-          const waveX = Math.sin(time * p.speed * 1.5 + p.phase) * width * 0.3;
-          const waveY = Math.cos(time * p.speed * 1.2 + p.phase * 1.3) * height * 0.1;
+        // --- 更新每个笔迹的位置 ---
+        for (let i = 0; i < strokes.length; i++) {
+          const s = strokes[i];
           
-          // 基础路径：从左上向右下缓慢移动，并循环
-          const baseX = (i / points.length) * width * 1.5 - width * 0.25 + time * 20 * p.speed;
-          const baseY = (i / points.length) * height * 0.7 + height * 0.15 + Math.sin(time * 0.5 + i) * 20;
+          // 使用多个正弦波叠加，产生自然、略带随机感的书写路径
+          const waveX = Math.sin(time * s.speed * 0.8 + s.phase) * width * 0.2;
+          const waveY = Math.cos(time * s.speed * 0.6 + s.phase * 1.3) * height * 0.15;
           
-          // 计算新位置，并让超出边界的点循环到另一边
+          // 基础路径：缓慢漂移，形成循环书写的感觉
+          const baseX = (i / strokes.length) * width * 1.5 - width * 0.25 + time * 8 * s.speed;
+          const baseY = (i / strokes.length) * height * 0.7 + height * 0.15 + Math.sin(time * 0.2 + i * 1.5) * 40;
+          
           let newX = baseX + waveX;
           let newY = baseY + waveY;
           
-          // 水平循环
-          if (newX > width + 50) newX = -50;
-          if (newX < -50) newX = width + 50;
-          // 垂直循环
-          if (newY > height + 50) newY = -50;
-          if (newY < -50) newY = height + 50;
+          // 边界循环，让笔迹源源不断
+          if (newX > width + 80) newX = -80;
+          if (newX < -80) newX = width + 80;
+          if (newY > height + 80) newY = -80;
+          if (newY < -80) newY = height + 80;
           
-          p.x = newX;
-          p.y = newY;
+          s.x = newX;
+          s.y = newY;
+          
+          // 保存历史位置（用于拖尾效果）
+          s.history.push({x: s.x, y: s.y});
+          if (s.history.length > s.length) {
+            s.history.shift();
+          }
         }
 
-        // 按x坐标排序，让线条更有序地连接
-        const sorted = [...points].sort((a, b) => a.x - b.x);
-
-        // 绘制主线条（经线）
-        ctx.lineWidth = 2.2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        for (let i = 0; i < sorted.length - 1; i++) {
-          const p1 = sorted[i];
-          const p2 = sorted[i+1];
-          // 根据位置选择颜色
-          const colorIdx = Math.floor((i / sorted.length) * palette.length) % palette.length;
-          ctx.strokeStyle = palette[colorIdx];
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.stroke();
+        // --- 绘制笔迹 ---
+        // 对每个笔迹，绘制其历史轨迹
+        for (let i = 0; i < strokes.length; i++) {
+          const s = strokes[i];
+          const hist = s.history;
+          if (hist.length < 2) continue;
+          
+          // 选择墨色
+          const colorIdx = Math.floor((i / strokes.length) * inkColors.length) % inkColors.length;
+          const baseColor = inkColors[colorIdx];
+          
+          // 绘制笔迹的每一个线段，模拟书写时的粗细变化
+          for (let j = 1; j < hist.length; j++) {
+            const p1 = hist[j-1];
+            const p2 = hist[j];
+            
+            // 计算线段距离，用于控制粗细和透明度
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 1) continue;
+            
+            // 笔触粗细：在基础宽度上加入随机波动，模仿毛笔的提按
+            const pressure = 0.6 + 0.4 * Math.sin(j * 0.5 + i * 2.0);
+            const width = s.widthBase * (0.4 + 0.6 * (j / hist.length)) * pressure;
+            
+            // 透明度：起笔淡、收笔淡，中间浓
+            const alphaFactor = Math.sin((j / hist.length) * Math.PI) * 0.8 + 0.2;
+            const alpha = s.alpha * alphaFactor * (0.7 + 0.3 * Math.sin(j * 0.3));
+            
+            // 解析基础颜色并应用透明度
+            const color = baseColor.replace('0.', alpha.toFixed(2) + '.');
+            
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = Math.max(0.5, width);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+          }
         }
 
-        // 绘制额外的纬线（横向交织），增加编织感
-        ctx.lineWidth = 1.2;
-        for (let i = 0; i < sorted.length - 3; i+=3) {
-          const p1 = sorted[i];
-          const p2 = sorted[i+3];
-          ctx.strokeStyle = 'rgba(180, 160, 140, 0.2)';
+        // --- 额外绘制一些零散的“飞白”墨点，增加书写感 ---
+        ctx.fillStyle = 'rgba(80, 65, 50, 0.08)';
+        for (let i = 0; i < 20; i++) {
+          const x = (Math.sin(time * 0.5 + i * 3.7) * 0.5 + 0.5) * width;
+          const y = (Math.cos(time * 0.3 + i * 5.1) * 0.5 + 0.5) * height;
+          const radius = 1 + Math.sin(time + i) * 0.8;
           ctx.beginPath();
-          ctx.moveTo(p1.x - 15, p1.y + 10);
-          ctx.lineTo(p2.x + 15, p2.y - 10);
-          ctx.stroke();
-        }
-
-        // 在一些节点上画小点，模拟毛线球质感
-        for (let i = 0; i < sorted.length; i+=2) {
-          const p = sorted[i];
-          ctx.fillStyle = 'rgba(180, 155, 130, 0.25)';
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+          ctx.arc(x, y, Math.max(0.5, radius), 0, Math.PI * 2);
           ctx.fill();
         }
 
@@ -229,13 +248,13 @@
 
       draw();
 
-      // 窗口大小变化时重置
+      // 窗口变化重置
       window.addEventListener('resize', () => {
         resize();
-        // 重新分布点，适应新尺寸
-        for (let i = 0; i < points.length; i++) {
-          points[i].x = Math.random() * width;
-          points[i].y = Math.random() * height;
+        for (let i = 0; i < strokes.length; i++) {
+          strokes[i].x = Math.random() * width;
+          strokes[i].y = Math.random() * height;
+          strokes[i].history = [];
         }
       });
 
